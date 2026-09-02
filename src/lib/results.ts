@@ -21,9 +21,7 @@ export interface ResultRow {
 }
 
 const STATS_CACHE_KEY = "typing:cache:stats";
-// Stats only ever change at one moment — a completed session — and that
-// path explicitly clears this cache. The TTL below is just a safety net in
-// case a caller ever records a result some other way.
+// Stats only change on a completed session, which explicitly clears this cache — the TTL is just a safety net for any other path.
 const STATS_CACHE_TTL_MS = 30 * 60 * 1000;
 
 interface CachedStats {
@@ -51,8 +49,7 @@ export async function recordResult(result: SessionResult): Promise<void> {
     accuracy: result.accuracy,
   });
 
-  // This is exactly the moment cached stats go stale — invalidate so the
-  // next profile view re-fetches instead of showing a pre-session number.
+  // This is exactly the moment cached stats go stale — invalidate so the next profile view re-fetches.
   if (!error) clearStatsCache();
 }
 

@@ -28,9 +28,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   const status = document.getElementById("onboarding-status") as HTMLParagraphElement;
   const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
 
-  // Attach the submit handler before doing anything async — otherwise a fast
-  // submit (or even just a slow network) can race ahead of preventDefault()
-  // and fall through to a native form GET.
+  // Attach the submit handler before anything async, or a fast submit can race preventDefault() and fall through to a native GET.
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const data = new FormData(form);
@@ -49,10 +47,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     window.location.href = "/dashboard";
   });
 
-  // Read the name straight from the signup session's metadata rather than
-  // through getProfile() — that goes through the profiles-table cache, and
-  // a background fetch here can resolve after saveGoals() below, clobbering
-  // the freshly-saved goals in the cache with this read's now-stale snapshot.
+  // Reads the name from session metadata, not getProfile() — a background profile fetch here could resolve after saveGoals() and clobber the cache with a stale snapshot.
   supabase.auth.getSession().then(({ data: { session } }) => {
     const name = session?.user?.user_metadata?.name;
     if (!name) return;

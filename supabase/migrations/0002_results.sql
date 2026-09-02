@@ -1,5 +1,4 @@
--- One row per completed passage, in either mode, used to compute the
--- profile page's stats and recent-sessions list.
+-- One row per completed passage, used for the profile page's stats and recent-sessions list.
 create table public.results (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,

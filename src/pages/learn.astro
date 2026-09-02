@@ -79,11 +79,7 @@ const initialPassage = generatePassage(STARTING_LETTERS, {
 
   let congratsTimer: number | null = null;
 
-  // A "sample" is one whole round's average pace on the current key, not
-  // one keystroke — matching keybr, where a key can't unlock any faster
-  // than finishing a full passage with a genuinely good average. These
-  // accumulate during the round and get reduced to a single sample at
-  // onComplete; onStart resets them for the next one.
+  // One EMA sample per round, not per keystroke (matching keybr) — accumulated here, reduced in onComplete, reset in onStart.
   let roundFocusLetter = "";
   let roundTotalMs = 0;
   let roundSampleCount = 0;
@@ -100,9 +96,7 @@ const initialPassage = generatePassage(STARTING_LETTERS, {
     congratsPopup.hidden = true;
   }
 
-  // Non-blocking on purpose: no focus is stolen and the overlay itself is
-  // pointer-events: none, so typing (and clicking) continues right through
-  // it — a lesson shouldn't have to pause to celebrate.
+  // pointer-events: none (below) keeps typing uninterrupted — a lesson shouldn't pause to celebrate.
   function showCongrats(emoji: string, title: string, letter?: string) {
     congratsEmoji.textContent = emoji;
     congratsTitle.textContent = title;
@@ -138,10 +132,7 @@ const initialPassage = generatePassage(STARTING_LETTERS, {
   const keyProgressValue = document.getElementById("key-progress-value") as HTMLSpanElement;
   const keyProgressFill = document.getElementById("key-progress-fill") as HTMLDivElement;
 
-  // Progress toward unlocking is gated on the *best*-ever pace (see
-  // lessonState.recordKeySample), not the latest round — so that's the
-  // number shown here, to avoid it looking disconnected from what the
-  // congrats popup actually fires on.
+  // Shown against best-ever pace (see recordKeySample), not the latest round — matches what actually triggers the congrats popup.
   function updateKeyProgress() {
     if (isComplete()) {
       keyProgress.hidden = true;
@@ -184,8 +175,7 @@ const initialPassage = generatePassage(STARTING_LETTERS, {
 
         if (isComplete() || roundSampleCount === 0) return;
 
-        // One sample for the whole round: your average pace on the current
-        // key across every clean press of it in this passage.
+        // One sample for the whole round: average pace on the current key across this passage.
         const keyResult = recordKeySample(roundTotalMs / roundSampleCount, targetWpm);
         if (!keyResult.unlocked) {
           updateKeyProgress();

@@ -1,12 +1,7 @@
-// Deletes the calling user's own account. Runs server-side because this
-// needs the service role key (elevated privileges) to call the Auth admin
-// API — that key must never reach the browser, so the anon-key client the
-// app otherwise uses can't do this itself.
+// Deletes the calling user's own account via the Auth admin API — needs the service role key, which can't reach the browser, so this runs server-side.
 //
-// Deploy with: supabase functions deploy delete-account
-// Requires the SUPABASE_SERVICE_ROLE_KEY secret to be set:
-//   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your service role key>
-// (SUPABASE_URL and SUPABASE_ANON_KEY are provided automatically.)
+// Deploy: supabase functions deploy delete-account
+// Then:   supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<your service role key>
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -23,8 +18,7 @@ Deno.serve(async (req: Request) => {
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // Verify who's actually calling, using their own JWT — never trust a
-  // user id passed in the request body.
+  // Verify who's actually calling, using their own JWT — never trust a user id passed in the request body.
   const callerClient = createClient(supabaseUrl, anonKey, {
     global: { headers: { Authorization: authHeader } },
   });

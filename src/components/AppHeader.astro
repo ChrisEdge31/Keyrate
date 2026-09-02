@@ -1,8 +1,5 @@
 ---
-// Purely static — this only appears on guest-only routes, so there's no
-// auth state to check and nothing to swap after mount. That's deliberate:
-// a runtime "check session, then swap chrome" step is exactly what caused
-// a visible flicker before.
+// Purely static — only appears on guest-only routes, so there's no auth state to check. A runtime "check session, swap chrome" step is what caused flicker before.
 ---
 
 <header class="app-header">

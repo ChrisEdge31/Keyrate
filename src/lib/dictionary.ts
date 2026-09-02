@@ -1,8 +1,4 @@
-// A curated bank of common English words, skewed toward short words built
-// from common letters (like real word-frequency lists tend to be) — that's
-// what lets restrictive lessons (e.g. only "e n i a r l" unlocked) still find
-// plenty of real matches. Grouped by length purely for readability; order
-// doesn't matter to the code that consumes this.
+// A curated word bank skewed toward short, common-letter words, so restrictive lessons (e.g. only "e n i a r l") still find real matches. Grouped by length for readability only.
 export const COMMON_WORDS = [
   // 1-letter
   "a",

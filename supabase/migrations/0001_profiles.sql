@@ -1,5 +1,4 @@
--- One profile row per auth user, holding the app-specific data that
--- auth.users doesn't: display name and onboarding goals.
+-- One profile row per auth user: display name and onboarding goals, which auth.users doesn't hold.
 create table public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   name text,
@@ -18,12 +17,7 @@ create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id);
 
--- Profiles are created via this trigger, not a client-side insert: signup
--- can leave a user without an active session (e.g. "confirm email" is on
--- by default for new Supabase projects), and an RLS-gated insert from the
--- client would silently fail in that window. security definer lets this
--- run regardless of session state, reading the name out of the signup
--- metadata the client passes in options.data.
+-- Created via trigger, not a client insert: signup can leave a user without a session (e.g. email confirmation), and an RLS-gated insert would silently fail then. security definer runs regardless.
 create function public.handle_new_user()
 returns trigger
 language plpgsql

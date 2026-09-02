@@ -1,6 +1,4 @@
-// A tiny localStorage-backed cache with a max-age check. Deliberately dumb:
-// callers decide what's worth caching, how long it stays fresh, and when to
-// invalidate it explicitly — this just stores a value with a timestamp.
+// A tiny localStorage-backed cache with a max-age check — callers decide what's worth caching and when to invalidate it.
 interface CacheEntry<T> {
   value: T;
   cachedAt: number;

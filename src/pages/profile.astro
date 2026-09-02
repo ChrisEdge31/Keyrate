@@ -130,9 +130,7 @@ import DashboardLayout from "../layouts/DashboardLayout.astro";
     if (avatarEl) avatarEl.textContent = profile.name.charAt(0).toUpperCase();
   }
 
-  // Every interactive element gets wired up right away, before the (slower,
-  // real network) stats fetch below — otherwise a fast submit can race
-  // ahead of its listener and fall through to a native form GET.
+  // Every interactive element is wired up before the slower stats fetch below, or a fast submit could race ahead of its listener.
   const passwordForm = document.getElementById("password-form") as HTMLFormElement;
   const passwordStatus = document.getElementById("password-status") as HTMLParagraphElement;
   const passwordSubmit = passwordForm.querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -196,9 +194,7 @@ import DashboardLayout from "../layouts/DashboardLayout.astro";
   const keyProgressFill = document.getElementById("key-progress-fill") as HTMLDivElement;
   const resetButton = document.getElementById("reset-progress") as HTMLButtonElement;
 
-  // Shown against the *best*-ever pace, not the latest round — that's the
-  // number that actually gates unlocking (see lessonState.recordKeySample),
-  // so it's the one number here that matches what triggers the popup.
+  // Shown against best-ever pace (see recordKeySample), not the latest round — matches what actually triggers the popup.
   function updateProgressStatus() {
     if (isComplete()) {
       progressStatus.textContent = "All 26 keys unlocked — free practice from here!";
@@ -247,9 +243,7 @@ import DashboardLayout from "../layouts/DashboardLayout.astro";
     window.location.href = "/";
   });
 
-  // The stats fetch is a real network call (and, unlike the rest of this
-  // page, not just a local session read) — it runs last so it can't delay
-  // any of the interactive elements above from becoming usable.
+  // The stats fetch is a real network call, unlike the rest of this page — it runs last so it can't delay the interactive elements above.
   const averageWpmEl = document.getElementById("stat-average-wpm") as HTMLSpanElement;
   const accuracyEl = document.getElementById("stat-accuracy") as HTMLSpanElement;
   const bestWpmEl = document.getElementById("stat-best-wpm") as HTMLSpanElement;

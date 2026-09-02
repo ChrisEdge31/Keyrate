@@ -4,20 +4,13 @@ export const LETTER_ORDER = "eniarltosudycghpmkbwfzvxqj".split("");
 const UNLOCKED_KEY = "typing:lesson-unlocked-count";
 const EMA_KEY = "typing:lesson-ema";
 
-// keybr starts learners on E N I A R L — enough letters to form real pseudo-words
-// from the start, rather than the near-unusable output of just one or two keys.
+// keybr starts learners on E N I A R L — enough to form real pseudo-words, unlike just one or two keys.
 export const START_UNLOCKED = 6;
 
-// Used when a profile has no speedGoal set — callers should otherwise pass
-// their own per-user target into recordKeySample.
+// Fallback when a profile has no speedGoal — callers should otherwise pass their own per-user target into recordKeySample.
 export const DEFAULT_TARGET_SPEED_WPM = 35;
 
-// keybr smooths each key's pace with an exponential moving average (its own
-// constant, α=0.1: 90% weight on history, 10% on the newest sample) rather
-// than a flat rolling average, and gates unlocking on the *best* EMA a key
-// has ever reached, not its current one — a single strong stretch stays
-// "good enough" even if a later attempt is slower. A key with zero samples
-// is simply "not calibrated"; there's no separate minimum sample count.
+// keybr's own constant: 90% weight on history, 10% on the newest sample. Gates unlocking on the *best* EMA reached, not the current one.
 const EMA_ALPHA = 0.1;
 
 function readUnlockedCount(): number {

@@ -2,13 +2,10 @@ import { COMMON_WORDS } from "./dictionary";
 
 const VOWELS = new Set(["a", "e", "i", "o", "u", "y"]);
 
-// Below this many real-word matches, repeating the same handful of words
-// gets monotonous, so we top up with generated pseudo-words instead.
+// Below this many real-word matches, repeating the same handful gets monotonous — top up with pseudo-words instead.
 const MIN_REAL_WORD_POOL = 8;
 
-// Like keybr: when a focus letter is given, every candidate word must
-// contain it, not merely be allowed to. Otherwise a newly-unlocked letter
-// can be rare in generated text, starving the very key being measured.
+// Like keybr: a focus letter must appear in every candidate word, not merely be allowed to, or it can end up rare in the generated text.
 function wordsMatchingLetters(enabled: string[], focusLetter?: string): string[] {
   const allowed = new Set(enabled);
   return COMMON_WORDS.filter(
@@ -17,8 +14,7 @@ function wordsMatchingLetters(enabled: string[], focusLetter?: string): string[]
   );
 }
 
-// Approximate relative English letter frequencies, used to weight generation
-// so pseudo-words favor common letters the way real words do.
+// Approximate relative English letter frequencies, so pseudo-words favor common letters like real words do.
 const LETTER_WEIGHT: Record<string, number> = {
   a: 8.2, b: 1.5, c: 2.8, d: 4.3, e: 12.7, f: 2.2, g: 2.0, h: 6.1, i: 7.0,
   j: 0.15, k: 0.77, l: 4.0, m: 2.4, n: 6.7, o: 7.5, p: 1.9, q: 0.1,
@@ -30,11 +26,7 @@ const LENGTH_WEIGHTS: Array<[number, number]> = [
   [2, 4], [3, 14], [4, 20], [5, 19], [6, 15], [7, 11], [8, 7], [9, 4],
 ];
 
-// Frequency shapes the pick but never dominates it: with a small enabled set
-// (e.g. an "f" + "j" home-row lesson) a pure frequency weighting would bury
-// the rarer letter under the common one, defeating the point of practicing
-// both. A flat baseline keeps every enabled letter well represented while
-// frequency still nudges common letters ahead for full-alphabet realism.
+// Frequency shapes the pick but never dominates it — pure frequency weighting would bury a rare letter under a common one in a small enabled set (e.g. "f" + "j").
 function effectiveWeight(letter: string): number {
   return 1 + (LETTER_WEIGHT[letter] ?? 1) * 0.3;
 }
@@ -68,12 +60,7 @@ function shuffle<T>(items: readonly T[]): T[] {
   return arr;
 }
 
-// Hands out every word once, in shuffled order, before reshuffling and
-// starting over — so a word can't repeat until the whole pool has been
-// used. Uniform random-with-replacement sampling looks fine against a
-// huge dictionary, but a restrictive lesson (e.g. only 6 letters unlocked)
-// might have a real-word pool of just 20-30 words, where it visibly
-// repeats the same handful within a single passage.
+// Hands out every word once, shuffled, before reshuffling — plain random sampling visibly repeats when a restrictive lesson's real-word pool is only 20-30 words.
 function createBagSampler<T>(items: readonly T[]): () => T {
   let bag: T[] = [];
   let last: T | undefined;

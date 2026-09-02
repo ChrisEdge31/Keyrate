@@ -11,15 +11,12 @@ export interface Profile {
 
 export interface AuthResult {
   error: string | null;
-  /** True when signup succeeded but there's no session yet — most Supabase
-   * projects require email confirmation before the account can sign in. */
+  /** True when signup succeeded but there's no session yet — email confirmation is likely required. */
   needsConfirmation?: boolean;
 }
 
 const PROFILE_CACHE_KEY = "typing:cache:profile";
-// Name and goals rarely change, so this can be long-lived. Writes
-// (saveGoals) patch the cache directly instead of waiting for it to
-// expire, so this TTL is really just an upper bound on staleness.
+// Name and goals rarely change, so this can be long-lived — saveGoals patches the cache directly, so this TTL is just an upper bound on staleness.
 const PROFILE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CachedProfile extends Profile {
@@ -63,12 +60,7 @@ export async function isSignedIn(): Promise<boolean> {
 }
 
 export async function getProfile(): Promise<Profile | null> {
-  // getSession() reads the local session with no network round-trip in the
-  // common case — unlike getUser(), which always calls out to the Auth
-  // server to re-verify. We only need the id here (for the cache check and
-  // to scope the query), and the REST call itself is still authorized by
-  // the real JWT and enforced server-side by RLS either way, so this loses
-  // no security — it just stops paying for a network call on every cache hit.
+  // getSession() skips getUser()'s network round-trip — RLS still enforces access server-side either way, so this loses no security, just a redundant call on cache hits.
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -110,8 +102,7 @@ export async function saveGoals(speedGoal: number, dailyMinutes: number): Promis
     .eq("id", user.id);
   if (error) return { error: error.message };
 
-  // We know exactly what changed, so patch the cache in place rather than
-  // invalidating it — no need to force a re-fetch for a write we made ourselves.
+  // We know exactly what changed, so patch the cache in place rather than forcing a re-fetch for a write we made ourselves.
   const cached = getCached<CachedProfile>(PROFILE_CACHE_KEY, PROFILE_CACHE_TTL_MS);
   if (cached && cached.userId === user.id) {
     setCached<CachedProfile>(PROFILE_CACHE_KEY, { ...cached, speedGoal, dailyMinutes });
@@ -138,12 +129,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
   return { error: error?.message ?? null };
 }
 
-/**
- * Deletes the signed-in user's account. This calls a Supabase Edge Function
- * because deleting an auth user requires the service role key, which must
- * never be shipped to the browser — the anon key this client uses can't do
- * it. See supabase/functions/delete-account.
- */
+/** Deletes the account via an edge function — deleting an auth user needs the service role key, which can't ship to the browser. See supabase/functions/delete-account. */
 export async function deleteAccount(): Promise<AuthResult> {
   const {
     data: { session },

@@ -26,11 +26,7 @@ export interface TypingSessionCallbacks {
   onComplete?: (result: TypingResult) => void;
   /** Called when the user presses Enter after finishing a passage, to fetch the next one. */
   onAdvance?: () => string;
-  /**
-   * Fired on a correct keystroke that took only one try — a position that
-   * was ever mistyped never produces a sample, even once it's fixed. That
-   * matches keybr: a fumbled key costs you a data point, not a slow one.
-   */
+  /** Fired on a correct keystroke that took only one try — a position ever mistyped never produces a sample, even once fixed. */
   onKeystroke?: (sample: KeystrokeSample) => void;
 }
 
@@ -43,18 +39,13 @@ export function createTypingSession(
   callbacks: TypingSessionCallbacks = {},
 ): TypingSession {
   let passage = "";
-  // The cursor only advances on a correct keystroke, so this doubles as both
-  // "characters typed" and "characters typed correctly" — a wrong key never
-  // moves it. A miss is still recorded (see missedPositions) so retrying the
-  // same position doesn't erase the fact that it took more than one try.
+  // Only advances on a correct keystroke, so it's both "typed" and "typed correctly" — a wrong key never moves it.
   let position = 0;
   let startTime: number | null = null;
   let timerId: number | null = null;
   let awaitingAdvance = false;
   const missedPositions = new Set<number>();
-  // Anchors each keystroke sample to the previous *correct* keystroke (not
-  // the previous attempt), so a fumbled key naturally shows up as a slow
-  // sample on the eventual correct press rather than being measured away.
+  // Anchored to the previous *correct* keystroke, not the previous attempt, so a fumbled key shows up as a slow sample on the eventual correct press.
   let lastCorrectTime: number | null = null;
 
   function renderPassage() {
@@ -129,9 +120,7 @@ export function createTypingSession(
   el.input.addEventListener("keydown", (event) => {
     if (el.input.disabled) return;
     if (event.ctrlKey || event.metaKey || event.altKey) return;
-    // Only a single printable character can move the cursor — Backspace,
-    // Tab, arrows, Shift, etc. are all ignored. There's nothing to correct:
-    // a wrong key never gets typed in the first place.
+    // Only a single printable character can move the cursor — Backspace, Tab, arrows, etc. are ignored.
     if (event.key.length !== 1) return;
     event.preventDefault();
 
