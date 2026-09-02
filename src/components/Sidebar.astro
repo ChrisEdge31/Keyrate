@@ -1,0 +1,95 @@
+---
+const links = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/learn", label: "Learn" },
+  { href: "/practice", label: "Practice" },
+  { href: "/profile", label: "Profile" },
+];
+
+const currentPath = Astro.url.pathname;
+---
+
+<aside class="sidebar">
+  <a class="brand" href="/dashboard">Keyrate</a>
+  <nav class="links">
+    {links.map((link) => (
+      <a href={link.href} class={currentPath === link.href ? "active" : ""}>
+        {link.label}
+      </a>
+    ))}
+  </nav>
+  <a class="logout" href="/" id="logout-link">Log out</a>
+</aside>
+
+<script>
+  import { signOut } from "../lib/auth";
+
+  document.getElementById("logout-link")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await signOut();
+    window.location.href = "/";
+  });
+</script>
+
+<style>
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 220px;
+    flex-shrink: 0;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    padding: 1.5rem 1rem;
+    background-color: var(--primary-l1);
+    border-right: 1px solid var(--primary-d1);
+  }
+
+  .brand {
+    font-family: var(--header-font-family);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--Name-color);
+    text-decoration: none;
+    padding: 0 0.75rem;
+    margin-bottom: 2rem;
+  }
+
+  .links {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .links a {
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    color: var(--secondary-d1);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .links a:hover {
+    color: var(--Name-color);
+    background-color: var(--primary);
+  }
+
+  .links a.active {
+    color: var(--Name-color);
+    background-color: var(--primary);
+    font-weight: 600;
+  }
+
+  .logout {
+    margin-top: auto;
+    padding: 0.6rem 0.75rem;
+    color: var(--secondary-l1);
+    text-decoration: none;
+    font-size: 0.85rem;
+  }
+
+  .logout:hover {
+    color: var(--error);
+  }
+</style>

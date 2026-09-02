@@ -1,0 +1,50 @@
+---
+import AuthCard from "../components/AuthCard.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout title="Log in — Keyrate" showCta={false}>
+  <AuthCard title="Welcome back" subtitle="Log in to keep tracking your progress.">
+    <form id="login-form">
+      <label>
+        Email
+        <input type="email" name="email" autocomplete="email" required />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit">Log in</button>
+      <p class="form-status" id="login-status"></p>
+    </form>
+    <p class="form-note">Don't have an account? <a href="/signup">Sign up</a></p>
+  </AuthCard>
+</MarketingLayout>
+
+<script>
+  import { signIn } from "../lib/auth";
+
+  const form = document.getElementById("login-form") as HTMLFormElement;
+  const status = document.getElementById("login-status") as HTMLParagraphElement;
+  const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const email = String(data.get("email") ?? "");
+    const password = String(data.get("password") ?? "");
+
+    submitButton.disabled = true;
+    status.textContent = "";
+
+    const result = await signIn(email, password);
+
+    if (result.error) {
+      status.textContent = result.error;
+      submitButton.disabled = false;
+      return;
+    }
+
+    window.location.href = "/dashboard";
+  });
+</script>

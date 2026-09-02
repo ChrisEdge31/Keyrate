@@ -1,0 +1,136 @@
+---
+interface Props {
+  initialPassage: string;
+}
+
+const { initialPassage } = Astro.props;
+---
+
+<section class="stats-bar">
+  <div class="stat">
+    <span class="value" id="stat-wpm">0</span>
+    <span class="label">WPM</span>
+  </div>
+  <div class="stat">
+    <span class="value" id="stat-accuracy">100%</span>
+    <span class="label">Accuracy</span>
+  </div>
+  <div class="stat">
+    <span class="value" id="stat-time">0s</span>
+    <span class="label">Time</span>
+  </div>
+  <button id="restart" type="button">New passage</button>
+</section>
+
+<div class="type-area" id="type-area">
+  <div class="passage" id="passage">{initialPassage}</div>
+  <input
+    id="typed-input"
+    class="typed-input"
+    type="text"
+    autocomplete="off"
+    autocapitalize="off"
+    autocorrect="off"
+    spellcheck="false"
+    aria-label="Typing input"
+  />
+</div>
+
+<script>
+  const typeArea = document.getElementById("type-area") as HTMLDivElement;
+  const input = document.getElementById("typed-input") as HTMLInputElement;
+  typeArea.addEventListener("click", () => input.focus());
+</script>
+
+<style>
+  .stats-bar {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding-bottom: 1.5rem;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .stat .value {
+    font-family: var(--value-font-family);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--Name-color);
+  }
+
+  .stat .label {
+    font-size: 0.75rem;
+    color: var(--secondary-d1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  #restart {
+    margin-left: auto;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid var(--primary-d1);
+    background-color: var(--primary-l1);
+    color: var(--secondary-d1);
+    cursor: pointer;
+  }
+
+  #restart:hover {
+    border-color: var(--secondary);
+    color: var(--Name-color);
+  }
+
+  .type-area {
+    position: relative;
+    padding: 2rem;
+    background-color: var(--primary-l1);
+    border: 1px solid var(--primary-d1);
+    border-radius: 8px;
+    cursor: text;
+  }
+
+  .type-area:focus-within {
+    border-color: var(--accent);
+  }
+
+  .passage {
+    font-family: var(--value-font-family);
+    font-size: 1.5rem;
+    line-height: 2;
+    letter-spacing: 0.02em;
+    color: var(--textinput__color);
+  }
+
+  .passage :global(.correct) {
+    color: var(--textinput--hit__color);
+  }
+
+  .passage :global(.incorrect) {
+    color: var(--textinput--miss__color);
+    text-decoration: underline;
+  }
+
+  .passage :global(.current) {
+    color: var(--Name-color);
+    background-color: var(--textinput--special__color);
+    border-radius: 2px;
+  }
+
+  .passage :global(.current.incorrect) {
+    color: var(--textinput--miss__color);
+    text-decoration: underline;
+  }
+
+  .typed-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+</style>

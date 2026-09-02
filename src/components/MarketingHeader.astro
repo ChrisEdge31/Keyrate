@@ -1,0 +1,63 @@
+---
+interface Props {
+  showCta?: boolean;
+}
+
+const { showCta = true } = Astro.props;
+---
+
+<header class="marketing-header">
+  <a class="brand" href="/">Keyrate</a>
+  {showCta && (
+    <a class="cta" href="/signup" id="header-cta">
+      Get started
+    </a>
+  )}
+</header>
+
+<script>
+  import { isSignedIn } from "../lib/auth";
+
+  const cta = document.getElementById("header-cta");
+  if (cta) {
+    isSignedIn().then((signedIn) => {
+      if (signedIn) {
+        cta.textContent = "Dashboard";
+        cta.setAttribute("href", "/dashboard");
+      }
+    });
+  }
+</script>
+
+<style>
+  .marketing-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background-color: var(--primary-l1);
+    border-bottom: 1px solid var(--primary-d1);
+  }
+
+  .brand {
+    font-family: var(--header-font-family);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--Name-color);
+    text-decoration: none;
+  }
+
+  .cta {
+    padding: 0.5rem 1.1rem;
+    border-radius: 6px;
+    background-color: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .cta:hover {
+    background-color: var(--accent-l1);
+  }
+</style>

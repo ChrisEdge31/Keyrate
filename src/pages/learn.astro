@@ -1,0 +1,353 @@
+---
+import Keyboard from "../components/Keyboard.astro";
+import TypingPanel from "../components/TypingPanel.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { LETTER_ORDER, START_UNLOCKED, DEFAULT_TARGET_SPEED_WPM } from "../lib/lessonState";
+import { generatePassage } from "../lib/words";
+
+const STARTING_LETTERS = LETTER_ORDER.slice(0, START_UNLOCKED);
+const initialPassage = generatePassage(STARTING_LETTERS, {
+  focusLetter: STARTING_LETTERS[STARTING_LETTERS.length - 1],
+});
+---
+
+<DashboardLayout title="Learn — Keyrate">
+  <TypingPanel initialPassage={initialPassage} />
+
+  <div class="congrats-popup" id="congrats-popup" hidden>
+    <div class="congrats-card" id="congrats-card">
+      <div class="congrats-emoji" id="congrats-emoji">🎉</div>
+      <p class="congrats-title" id="congrats-title"></p>
+      <p class="congrats-letter" id="congrats-letter"></p>
+    </div>
+  </div>
+
+  <div class="keyboard-wrap">
+    <Keyboard />
+  </div>
+
+  <div class="key-progress" id="key-progress">
+    <div class="key-progress-header">
+      <span id="key-progress-label">Learning…</span>
+      <span id="key-progress-value"></span>
+    </div>
+    <div class="key-progress-bar">
+      <div class="key-progress-fill" id="key-progress-fill"></div>
+    </div>
+  </div>
+
+  <p class="page-hint">
+    The cursor won't move until you press the right key. Finish a passage with an average pace on the current key
+    of <span id="target-wpm">{DEFAULT_TARGET_SPEED_WPM}</span>+ wpm to unlock the next one — a single strong round
+    counts even if you slow down after.
+    A mistyped key doesn't count against your pace, it just costs you that measurement. Press Enter after finishing
+    a passage to keep going. Locked keys are dimmed; the key you're currently learning is ringed. Your key-by-key
+    progress is on your <a href="/profile">profile</a>.
+  </p>
+</DashboardLayout>
+
+<script>
+  import { getProfile } from "../lib/auth";
+  import { recordResult } from "../lib/results";
+  import { generatePassage } from "../lib/words";
+  import { createTypingSession } from "../lib/typingSession";
+  import {
+    getUnlockedLetters,
+    getCurrentLetter,
+    getKeyConfidence,
+    recordKeySample,
+    isComplete,
+    DEFAULT_TARGET_SPEED_WPM,
+  } from "../lib/lessonState";
+
+  const profile = await getProfile();
+  if (!profile) {
+    window.location.href = "/login";
+    throw new Error("Not signed in — redirecting to /login.");
+  }
+
+  const targetWpm = profile.speedGoal ?? DEFAULT_TARGET_SPEED_WPM;
+  const targetWpmEl = document.getElementById("target-wpm");
+  if (targetWpmEl) targetWpmEl.textContent = String(targetWpm);
+
+  const restartButton = document.getElementById("restart") as HTMLButtonElement;
+  const congratsPopup = document.getElementById("congrats-popup") as HTMLDivElement;
+  const congratsCard = document.getElementById("congrats-card") as HTMLDivElement;
+  const congratsEmoji = document.getElementById("congrats-emoji") as HTMLDivElement;
+  const congratsTitle = document.getElementById("congrats-title") as HTMLParagraphElement;
+  const congratsLetter = document.getElementById("congrats-letter") as HTMLParagraphElement;
+
+  let congratsTimer: number | null = null;
+
+  // A "sample" is one whole round's average pace on the current key, not
+  // one keystroke — matching keybr, where a key can't unlock any faster
+  // than finishing a full passage with a genuinely good average. These
+  // accumulate during the round and get reduced to a single sample at
+  // onComplete; onStart resets them for the next one.
+  let roundFocusLetter = "";
+  let roundTotalMs = 0;
+  let roundSampleCount = 0;
+
+  function nextPassage() {
+    return generatePassage(getUnlockedLetters(), { focusLetter: getCurrentLetter() });
+  }
+
+  function hideCongrats() {
+    if (congratsTimer !== null) {
+      window.clearTimeout(congratsTimer);
+      congratsTimer = null;
+    }
+    congratsPopup.hidden = true;
+  }
+
+  // Non-blocking on purpose: no focus is stolen and the overlay itself is
+  // pointer-events: none, so typing (and clicking) continues right through
+  // it — a lesson shouldn't have to pause to celebrate.
+  function showCongrats(emoji: string, title: string, letter?: string) {
+    congratsEmoji.textContent = emoji;
+    congratsTitle.textContent = title;
+    if (letter) {
+      congratsLetter.textContent = letter.toUpperCase();
+      congratsLetter.hidden = false;
+    } else {
+      congratsLetter.hidden = true;
+    }
+
+    congratsPopup.hidden = false;
+    // Restart the pop-in animation even if it's still mid-unlock-streak.
+    congratsCard.classList.remove("pop");
+    void congratsCard.offsetWidth;
+    congratsCard.classList.add("pop");
+
+    if (congratsTimer !== null) window.clearTimeout(congratsTimer);
+    congratsTimer = window.setTimeout(hideCongrats, 2500);
+  }
+
+  function updateKeyboardLocks() {
+    const unlocked = new Set(getUnlockedLetters());
+    const current = getCurrentLetter();
+    document.querySelectorAll<SVGElement>('.keyboard [data-key^="Key"]').forEach((keyEl) => {
+      const letter = (keyEl.getAttribute("data-key") ?? "").replace("Key", "").toLowerCase();
+      keyEl.classList.toggle("disabled", !unlocked.has(letter));
+      keyEl.classList.toggle("current", letter === current && !isComplete());
+    });
+  }
+
+  const keyProgress = document.getElementById("key-progress") as HTMLDivElement;
+  const keyProgressLabel = document.getElementById("key-progress-label") as HTMLSpanElement;
+  const keyProgressValue = document.getElementById("key-progress-value") as HTMLSpanElement;
+  const keyProgressFill = document.getElementById("key-progress-fill") as HTMLDivElement;
+
+  // Progress toward unlocking is gated on the *best*-ever pace (see
+  // lessonState.recordKeySample), not the latest round — so that's the
+  // number shown here, to avoid it looking disconnected from what the
+  // congrats popup actually fires on.
+  function updateKeyProgress() {
+    if (isComplete()) {
+      keyProgress.hidden = true;
+      return;
+    }
+    keyProgress.hidden = false;
+    const letter = getCurrentLetter();
+    keyProgressLabel.textContent = `Learning "${letter.toUpperCase()}"`;
+    const { bestWpm, count } = getKeyConfidence();
+    if (count === 0 || bestWpm === null) {
+      keyProgressValue.textContent = `not calibrated yet (target ${targetWpm} wpm)`;
+      keyProgressFill.style.width = "0%";
+    } else {
+      keyProgressValue.textContent = `${bestWpm} / ${targetWpm} wpm`;
+      keyProgressFill.style.width = `${Math.min(100, Math.round((bestWpm / targetWpm) * 100))}%`;
+    }
+  }
+
+  const session = createTypingSession(
+    {
+      passageEl: document.getElementById("passage") as HTMLDivElement,
+      input: document.getElementById("typed-input") as HTMLInputElement,
+      wpmEl: document.getElementById("stat-wpm") as HTMLSpanElement,
+      accuracyEl: document.getElementById("stat-accuracy") as HTMLSpanElement,
+      timeEl: document.getElementById("stat-time") as HTMLSpanElement,
+    },
+    {
+      onStart: () => {
+        roundFocusLetter = getCurrentLetter();
+        roundTotalMs = 0;
+        roundSampleCount = 0;
+      },
+      onKeystroke: ({ char, elapsedMs }) => {
+        if (isComplete() || char !== roundFocusLetter) return;
+        roundTotalMs += elapsedMs;
+        roundSampleCount++;
+      },
+      onComplete: (result) => {
+        recordResult({ mode: "learn", wpm: result.wpm, accuracy: result.accuracy });
+
+        if (isComplete() || roundSampleCount === 0) return;
+
+        // One sample for the whole round: your average pace on the current
+        // key across every clean press of it in this passage.
+        const keyResult = recordKeySample(roundTotalMs / roundSampleCount, targetWpm);
+        if (!keyResult.unlocked) {
+          updateKeyProgress();
+          return;
+        }
+
+        updateKeyboardLocks();
+        updateKeyProgress();
+        if (isComplete()) {
+          showCongrats("🏆", "The whole keyboard is unlocked!");
+        } else {
+          showCongrats("🎉", "Key unlocked!", keyResult.nextLetter ?? undefined);
+        }
+      },
+      onAdvance: () => {
+        hideCongrats();
+        return nextPassage();
+      },
+    },
+  );
+
+  restartButton.addEventListener("click", () => {
+    hideCongrats();
+    session.start(nextPassage());
+  });
+
+  updateKeyboardLocks();
+  updateKeyProgress();
+  session.start(nextPassage());
+</script>
+
+<style>
+  .keyboard-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: 2rem;
+  }
+
+  .congrats-popup {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 50;
+  }
+
+  .congrats-popup[hidden] {
+    display: none;
+  }
+
+  .congrats-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 1.75rem 2.5rem;
+    background-color: var(--primary-l1);
+    border: 1px solid var(--primary-d1);
+    border-radius: 12px;
+    box-shadow: 0 12px 40px var(--shadow-color);
+    opacity: 0;
+  }
+
+  .congrats-card.pop {
+    animation: congrats-pop 2.5s ease forwards;
+  }
+
+  @keyframes congrats-pop {
+    0% {
+      opacity: 0;
+      transform: scale(0.85);
+    }
+    12% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    20% {
+      transform: scale(1);
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .congrats-emoji {
+    font-size: 2.5rem;
+    line-height: 1;
+  }
+
+  .congrats-title {
+    margin: 0;
+    color: var(--Name-color);
+    font-weight: 600;
+    font-size: 1.1rem;
+  }
+
+  .congrats-letter {
+    margin: 0;
+    font-family: var(--value-font-family);
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--Value--more__color);
+  }
+
+  .key-progress {
+    max-width: 24rem;
+    margin: 1.5rem auto 0;
+  }
+
+  .key-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: var(--secondary-d1);
+    margin-bottom: 0.4rem;
+  }
+
+  #key-progress-label {
+    font-weight: 600;
+    color: var(--Name-color);
+  }
+
+  #key-progress-value {
+    font-family: var(--value-font-family);
+  }
+
+  .key-progress-bar {
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--primary-d1);
+    overflow: hidden;
+  }
+
+  .key-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--accent);
+    border-radius: inherit;
+    transition: width 0.3s ease;
+  }
+
+  .page-hint {
+    text-align: center;
+    color: var(--secondary-l1);
+    font-size: 0.8rem;
+    padding-top: 0.75rem;
+  }
+
+  .page-hint a {
+    color: var(--secondary-d1);
+  }
+
+  :global(.keyboard svg.key.current rect) {
+    stroke: var(--KeyboardKey-pointer__color);
+    stroke-width: 3;
+  }
+</style>

@@ -1,0 +1,531 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+---
+
+<DashboardLayout title="Profile — Keyrate">
+  <section class="header">
+    <div class="avatar" id="profile-avatar">G</div>
+    <div>
+      <h1 id="profile-name">Guest</h1>
+      <p class="placeholder-note" id="profile-note"></p>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <span class="value" id="stat-average-wpm" style="color: var(--Chart-speed__color)">—</span>
+      <span class="label">Average WPM</span>
+    </div>
+    <div class="stat">
+      <span class="value" id="stat-accuracy" style="color: var(--Chart-accuracy__color)">—</span>
+      <span class="label">Accuracy</span>
+    </div>
+    <div class="stat">
+      <span class="value" id="stat-best-wpm" style="color: var(--Value--more__color)">—</span>
+      <span class="label">Best WPM</span>
+    </div>
+    <div class="stat">
+      <span class="value" id="stat-tests" style="color: var(--Value-color)">—</span>
+      <span class="label">Tests completed</span>
+    </div>
+  </section>
+
+  <section class="history">
+    <h2>Recent sessions</h2>
+    <table id="history-table" hidden>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>WPM</th>
+          <th>Accuracy</th>
+        </tr>
+      </thead>
+      <tbody id="history-body"></tbody>
+    </table>
+    <p id="history-empty">No sessions yet — go practice or learn to see your history here.</p>
+  </section>
+
+  <section class="lesson-progress">
+    <h2>Lesson progress</h2>
+    <div class="progress-row">
+      <div class="progress-info">
+        <p id="progress-status">Loading…</p>
+        <div class="key-progress-bar" id="key-progress-bar" hidden>
+          <div class="key-progress-fill" id="key-progress-fill"></div>
+        </div>
+      </div>
+      <button type="button" id="reset-progress">Reset progress</button>
+    </div>
+  </section>
+
+  <section class="settings">
+    <h2>Practice goals</h2>
+    <form id="goals-form">
+      <label>
+        Target speed (WPM)
+        <input type="number" name="speedGoal" min="10" max="200" step="5" required />
+      </label>
+      <label>
+        Daily practice goal (minutes)
+        <input type="number" name="dailyMinutes" min="5" max="120" step="5" required />
+      </label>
+      <button type="submit">Save goals</button>
+      <p class="form-status" id="goals-status"></p>
+    </form>
+  </section>
+
+  <section class="settings">
+    <h2>Change password</h2>
+    <form id="password-form">
+      <label>
+        Current password
+        <input type="password" name="currentPassword" autocomplete="current-password" required />
+      </label>
+      <label>
+        New password
+        <input type="password" name="newPassword" autocomplete="new-password" required minlength="8" />
+      </label>
+      <label>
+        Confirm new password
+        <input type="password" name="confirmPassword" autocomplete="new-password" required minlength="8" />
+      </label>
+      <button type="submit">Update password</button>
+      <p class="form-status" id="password-status"></p>
+    </form>
+  </section>
+
+  <section class="danger-zone">
+    <h2>Delete account</h2>
+    <p>Permanently deletes your account and all your data — sessions, goals, everything. This can't be undone.</p>
+    <button type="button" id="delete-account-button">Delete my account</button>
+    <p class="form-status" id="delete-status"></p>
+  </section>
+</DashboardLayout>
+
+<script>
+  import { getProfile, changePassword, deleteAccount, saveGoals } from "../lib/auth";
+  import { getStats } from "../lib/results";
+  import {
+    getUnlockedLetters,
+    getCurrentLetter,
+    getKeyConfidence,
+    resetLessonProgress,
+    isComplete,
+    LETTER_ORDER,
+    DEFAULT_TARGET_SPEED_WPM,
+  } from "../lib/lessonState";
+
+  const profile = await getProfile();
+  if (!profile) {
+    window.location.href = "/login";
+    throw new Error("Not signed in — redirecting to /login.");
+  }
+
+  let targetWpm = profile.speedGoal ?? DEFAULT_TARGET_SPEED_WPM;
+
+  if (profile.name) {
+    const nameEl = document.getElementById("profile-name");
+    const avatarEl = document.getElementById("profile-avatar");
+    if (nameEl) nameEl.textContent = profile.name;
+    if (avatarEl) avatarEl.textContent = profile.name.charAt(0).toUpperCase();
+  }
+
+  // Every interactive element gets wired up right away, before the (slower,
+  // real network) stats fetch below — otherwise a fast submit can race
+  // ahead of its listener and fall through to a native form GET.
+  const passwordForm = document.getElementById("password-form") as HTMLFormElement;
+  const passwordStatus = document.getElementById("password-status") as HTMLParagraphElement;
+  const passwordSubmit = passwordForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  passwordForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(passwordForm);
+    const currentPassword = String(data.get("currentPassword") ?? "");
+    const newPassword = String(data.get("newPassword") ?? "");
+    const confirmPassword = String(data.get("confirmPassword") ?? "");
+
+    passwordStatus.textContent = "";
+
+    if (newPassword !== confirmPassword) {
+      passwordStatus.textContent = "New passwords don't match.";
+      return;
+    }
+
+    passwordSubmit.disabled = true;
+    const passwordResult = await changePassword(currentPassword, newPassword);
+    passwordSubmit.disabled = false;
+
+    if (passwordResult.error) {
+      passwordStatus.textContent = passwordResult.error;
+      return;
+    }
+
+    passwordStatus.textContent = "Password updated.";
+    passwordForm.reset();
+  });
+
+  const goalsForm = document.getElementById("goals-form") as HTMLFormElement;
+  const goalsStatus = document.getElementById("goals-status") as HTMLParagraphElement;
+  const goalsSubmit = goalsForm.querySelector('button[type="submit"]') as HTMLButtonElement;
+  const speedGoalInput = goalsForm.querySelector('input[name="speedGoal"]') as HTMLInputElement;
+  const dailyMinutesInput = goalsForm.querySelector('input[name="dailyMinutes"]') as HTMLInputElement;
+  speedGoalInput.value = String(profile.speedGoal ?? DEFAULT_TARGET_SPEED_WPM);
+  dailyMinutesInput.value = String(profile.dailyMinutes ?? 15);
+
+  goalsForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(goalsForm);
+
+    goalsStatus.textContent = "";
+    goalsSubmit.disabled = true;
+    const goalsResult = await saveGoals(Number(data.get("speedGoal")), Number(data.get("dailyMinutes")));
+    goalsSubmit.disabled = false;
+
+    if (goalsResult.error) {
+      goalsStatus.textContent = goalsResult.error;
+      return;
+    }
+
+    targetWpm = Number(data.get("speedGoal"));
+    goalsStatus.textContent = "Goals saved.";
+    updateProgressStatus();
+  });
+
+  const progressStatus = document.getElementById("progress-status") as HTMLParagraphElement;
+  const keyProgressBar = document.getElementById("key-progress-bar") as HTMLDivElement;
+  const keyProgressFill = document.getElementById("key-progress-fill") as HTMLDivElement;
+  const resetButton = document.getElementById("reset-progress") as HTMLButtonElement;
+
+  // Shown against the *best*-ever pace, not the latest round — that's the
+  // number that actually gates unlocking (see lessonState.recordKeySample),
+  // so it's the one number here that matches what triggers the popup.
+  function updateProgressStatus() {
+    if (isComplete()) {
+      progressStatus.textContent = "All 26 keys unlocked — free practice from here!";
+      keyProgressBar.hidden = true;
+      return;
+    }
+    const label = `Key ${getUnlockedLetters().length} of ${LETTER_ORDER.length} — learning "${getCurrentLetter().toUpperCase()}"`;
+    const { bestWpm, count } = getKeyConfidence();
+    keyProgressBar.hidden = false;
+    if (count === 0 || bestWpm === null) {
+      progressStatus.textContent = `${label} — not calibrated yet (target ${targetWpm} wpm)`;
+      keyProgressFill.style.width = "0%";
+    } else {
+      progressStatus.textContent = `${label} — best ${bestWpm} / ${targetWpm} wpm`;
+      keyProgressFill.style.width = `${Math.min(100, Math.round((bestWpm / targetWpm) * 100))}%`;
+    }
+  }
+
+  updateProgressStatus();
+
+  resetButton.addEventListener("click", () => {
+    const confirmed = window.confirm("Reset your lesson progress back to the starting keys? This can't be undone.");
+    if (!confirmed) return;
+    resetLessonProgress();
+    updateProgressStatus();
+  });
+
+  const deleteButton = document.getElementById("delete-account-button") as HTMLButtonElement;
+  const deleteStatus = document.getElementById("delete-status") as HTMLParagraphElement;
+
+  deleteButton.addEventListener("click", async () => {
+    const confirmed = window.confirm(
+      "Delete your account? This permanently removes your account and all your data, and can't be undone.",
+    );
+    if (!confirmed) return;
+
+    deleteButton.disabled = true;
+    const deleteResult = await deleteAccount();
+
+    if (deleteResult.error) {
+      deleteStatus.textContent = deleteResult.error;
+      deleteButton.disabled = false;
+      return;
+    }
+
+    window.location.href = "/";
+  });
+
+  // The stats fetch is a real network call (and, unlike the rest of this
+  // page, not just a local session read) — it runs last so it can't delay
+  // any of the interactive elements above from becoming usable.
+  const averageWpmEl = document.getElementById("stat-average-wpm") as HTMLSpanElement;
+  const accuracyEl = document.getElementById("stat-accuracy") as HTMLSpanElement;
+  const bestWpmEl = document.getElementById("stat-best-wpm") as HTMLSpanElement;
+  const testsEl = document.getElementById("stat-tests") as HTMLSpanElement;
+  const historyTable = document.getElementById("history-table") as HTMLTableElement;
+  const historyBody = document.getElementById("history-body") as HTMLTableSectionElement;
+  const historyEmpty = document.getElementById("history-empty") as HTMLParagraphElement;
+
+  getStats().then((result) => {
+    if (result) {
+      const { stats, recent } = result;
+      averageWpmEl.textContent = String(stats.averageWpm);
+      accuracyEl.textContent = `${Math.round(stats.accuracy * 100)}%`;
+      bestWpmEl.textContent = String(stats.bestWpm);
+      testsEl.textContent = String(stats.testsCompleted);
+
+      if (recent.length > 0) {
+        for (const row of recent) {
+          const tr = document.createElement("tr");
+          const dateTd = document.createElement("td");
+          dateTd.textContent = row.date;
+          const wpmTd = document.createElement("td");
+          wpmTd.textContent = String(row.wpm);
+          const accTd = document.createElement("td");
+          accTd.textContent = `${Math.round(row.accuracy * 100)}%`;
+          tr.append(dateTd, wpmTd, accTd);
+          historyBody.appendChild(tr);
+        }
+        historyTable.hidden = false;
+        historyEmpty.hidden = true;
+      }
+    } else {
+      averageWpmEl.textContent = "0";
+      accuracyEl.textContent = "0%";
+      bestWpmEl.textContent = "0";
+      testsEl.textContent = "0";
+    }
+  });
+</script>
+
+<style>
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--primary-d1);
+  }
+
+  .avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background-color: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .header h1 {
+    margin: 0 0 0.35rem;
+    font-size: 1.5rem;
+  }
+
+  .placeholder-note {
+    margin: 0;
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+  }
+
+  .placeholder-note a {
+    color: var(--Name-color);
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    padding: 2rem 0;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 1.25rem;
+    background-color: var(--primary-l1);
+    border: 1px solid var(--primary-d1);
+    border-radius: 8px;
+  }
+
+  .stat .value {
+    font-family: var(--value-font-family);
+    font-size: 1.75rem;
+    font-weight: 700;
+  }
+
+  .stat .label {
+    color: var(--secondary-d1);
+    font-size: 0.85rem;
+  }
+
+  .history h2,
+  .lesson-progress h2,
+  .settings h2,
+  .danger-zone h2 {
+    font-size: 1.1rem;
+    margin: 0 0 1rem;
+  }
+
+  .lesson-progress,
+  .settings,
+  .danger-zone {
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--primary-d1);
+  }
+
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .progress-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .progress-row p {
+    margin: 0 0 0.5rem;
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+  }
+
+  .key-progress-bar {
+    width: 100%;
+    max-width: 20rem;
+    height: 8px;
+    border-radius: 999px;
+    background-color: var(--primary-d1);
+    overflow: hidden;
+  }
+
+  .key-progress-fill {
+    height: 100%;
+    width: 0%;
+    background-color: var(--accent);
+    border-radius: inherit;
+    transition: width 0.3s ease;
+  }
+
+  #reset-progress {
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    border: 1px solid var(--primary-d1);
+    background-color: var(--primary-l1);
+    color: var(--secondary-d1);
+    cursor: pointer;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+
+  #reset-progress:hover {
+    border-color: var(--secondary);
+    color: var(--Name-color);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--primary-d1);
+    font-size: 0.9rem;
+  }
+
+  th {
+    color: var(--secondary-d1);
+    font-weight: 600;
+  }
+
+  td:nth-child(2),
+  td:nth-child(3) {
+    font-family: var(--value-font-family);
+  }
+
+  #history-empty {
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+  }
+
+  #goals-form,
+  #password-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    max-width: 26rem;
+  }
+
+  #goals-form label,
+  #password-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    font-size: 0.9rem;
+    color: var(--secondary-d1);
+  }
+
+  #goals-form input,
+  #password-form input {
+    padding: 0.6rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid var(--primary-d1);
+    background-color: var(--primary-l1);
+    color: var(--Name-color);
+    font-family: var(--default-font-family);
+    font-size: 0.95rem;
+  }
+
+  #goals-form input:focus,
+  #password-form input:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  #goals-form button,
+  #password-form button,
+  #delete-account-button {
+    align-self: flex-start;
+    padding: 0.6rem 1.2rem;
+    border-radius: 6px;
+    border: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  #goals-form button,
+  #password-form button {
+    background-color: var(--accent);
+    color: #fff;
+  }
+
+  #goals-form button:hover,
+  #password-form button:hover {
+    background-color: var(--accent-l1);
+  }
+
+  .danger-zone p {
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+    max-width: 36rem;
+  }
+
+  #delete-account-button {
+    background-color: var(--error);
+    color: #fff;
+  }
+
+  #delete-account-button:hover {
+    background-color: var(--error-l1);
+  }
+
+  .form-status {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--error);
+    min-height: 1.2em;
+  }
+</style>

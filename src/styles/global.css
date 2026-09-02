@@ -1,0 +1,90 @@
+:root {
+    --default-font-family: "Open Sans",sans-serif;
+    --header-font-family: "Open Sans",sans-serif;
+    --value-font-family: "Ubuntu Mono",monospace;
+	--primary-d2: #4d4d4d;
+	--primary-d1: #404040;
+	--primary: #333;
+	--primary-l1: #2e2e2e;
+	--primary-l2: #2b2b2b;
+	--secondary-d1: #b8b3b3;
+	--secondary: #9f9999;
+	--secondary-l1: #867f7f;
+	--secondary-l2: #6c6666;
+	--secondary-f1: #898585;
+	--secondary-f2: #747070;
+	--accent-d2: #524d4d;
+	--accent-d1: #5f5a5a;
+	--accent: #6c6666;
+	--accent-l1: #797272;
+	--accent-l2: #867f7f;
+	--error-d1: #b75c5c;
+	--error: #9b4545;
+	--error-l1: #783535;
+	--shadow-color: #00000088;
+	--slow-key-color: #8c1818;
+	--fast-key-color: #448154;
+	--effort-color: #2d4a86;
+	--textinput__color: #9f9999;
+	--textinput--special__color: #696666;
+	--textinput--hit__color: #747070;
+	--textinput--miss__color: #9b4545;
+	--Name-color: #d0cece;
+	--Value-color: #867f7f;
+	--Value--more__color: #2a7e21;
+	--Value--less__color: #a1464e;
+	--Chart-speed__color: #517460;
+	--Chart-accuracy__color: #914331;
+	--Chart-complexity__color: #705282;
+	--Chart-threshold__color: #834c67;
+	--Chart-hist-h__color: #495074;
+	--Chart-hist-m__color: #743939;
+	--Chart-hist-r__color: #723a74;
+	--KeyboardKey-pointer__color: #4ba0f2;
+	--pinky-zone-color: #617a58;
+	--ring-zone-color: #76772d;
+	--middle-zone-color: #977831;
+	--left-index-zone-color: #5b6d66;
+	--right-index-zone-color: #835d67;
+	--thumb-zone-color: #854b44;
+	--syntax-keyword: #5991cd;
+	--syntax-string: #72b172;
+	--syntax-number: #b281d3;
+	--syntax-comment: #9f8484;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body {
+	margin: 0;
+	min-height: 100%;
+}
+
+body {
+	background-color: var(--primary-l2);
+	color: var(--secondary-d1);
+	font-family: var(--default-font-family);
+	font-size: 16px;
+	line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+	font-family: var(--header-font-family);
+	color: var(--Name-color);
+}
+
+code,
+pre,
+kbd {
+	font-family: var(--value-font-family);
+}

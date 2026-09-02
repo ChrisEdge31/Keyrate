@@ -1,0 +1,147 @@
+---
+import Keyboard from "../components/Keyboard.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+
+const features = [
+	{
+		title: "Learn key by key",
+		body: "Guided lessons unlock one new key at a time, using real words built only from what you've learned so far.",
+	},
+	{
+		title: "Real-time feedback",
+		body: "See every hit and miss as you type, with live WPM and accuracy tracking.",
+	},
+	{
+		title: "Finger-zone guidance",
+		body: "The on-screen keyboard is colored by finger zone, so you always know which finger belongs where.",
+	},
+	{
+		title: "Track your progress",
+		body: "Every session is logged so you can watch your speed and accuracy improve over time.",
+	},
+];
+---
+
+<MarketingLayout title="Keyrate — Learn to type faster">
+  <section class="hero">
+    <h1>Type faster. Type better.</h1>
+    <p class="lead">
+      A focused typing trainer that teaches proper finger placement and
+      tracks your speed and accuracy as you improve.
+    </p>
+    <div class="cta">
+      <a class="primary" href="/signup" id="hero-cta">Start learning</a>
+      <a class="secondary" href="/type">Try it out</a>
+    </div>
+  </section>
+
+  <section class="preview">
+    <Keyboard />
+  </section>
+
+  <section class="features">
+    {features.map((feature) => (
+      <div class="feature">
+        <h2>{feature.title}</h2>
+        <p>{feature.body}</p>
+      </div>
+    ))}
+  </section>
+</MarketingLayout>
+
+<script>
+  import { isSignedIn } from "../lib/auth";
+
+  const heroCta = document.getElementById("hero-cta");
+  if (heroCta) {
+    isSignedIn().then((signedIn) => {
+      if (signedIn) {
+        heroCta.textContent = "Start learning";
+        heroCta.setAttribute("href", "/dashboard");
+      }
+    });
+  }
+</script>
+
+<style>
+  .hero {
+    text-align: center;
+    padding: 3rem 0 2rem;
+  }
+
+  .hero h1 {
+    font-size: 2.75rem;
+    margin: 0 0 1rem;
+  }
+
+  .lead {
+    font-size: 1.1rem;
+    color: var(--secondary-d1);
+    max-width: 40rem;
+    margin: 0 auto 2rem;
+  }
+
+  .cta {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .cta a {
+    padding: 0.75rem 1.5rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .cta .primary {
+    background-color: var(--accent);
+    color: #fff;
+  }
+
+  .cta .primary:hover {
+    background-color: var(--accent-l1);
+  }
+
+  .cta .secondary {
+    background-color: transparent;
+    color: var(--secondary-d1);
+    border: 1px solid var(--primary-d1);
+  }
+
+  .cta .secondary:hover {
+    border-color: var(--secondary);
+    color: var(--Name-color);
+  }
+
+  .preview {
+    display: flex;
+    justify-content: center;
+    padding: 2rem 0;
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem 3rem;
+    padding: 3rem 0;
+    border-top: 1px solid var(--primary-d1);
+  }
+
+  @media (max-width: 640px) {
+    .features {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .feature h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem;
+  }
+
+  .feature p {
+    color: var(--secondary-d1);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,46 @@
+---
+interface Props {
+  statusId: string;
+  initialStatus: string;
+  buttonId: string;
+  buttonLabel: string;
+}
+
+const { statusId, initialStatus, buttonId, buttonLabel } = Astro.props;
+---
+
+<div class="control-bar">
+  <p id={statusId}>{initialStatus}</p>
+  <button id={buttonId} type="button">{buttonLabel}</button>
+</div>
+
+<style>
+  .control-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    padding-top: 2rem;
+  }
+
+  .control-bar p {
+    margin: 0;
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+  }
+
+  .control-bar button {
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    border: 1px solid var(--primary-d1);
+    background-color: var(--primary-l1);
+    color: var(--secondary-d1);
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+
+  .control-bar button:hover {
+    border-color: var(--secondary);
+    color: var(--Name-color);
+  }
+</style>

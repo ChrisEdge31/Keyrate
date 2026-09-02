@@ -1,0 +1,25 @@
+---
+import Layout from "./Layout.astro";
+import AppHeader from "../components/AppHeader.astro";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<Layout title={title}>
+  <AppHeader />
+  <main class="app-content">
+    <slot />
+  </main>
+</Layout>
+
+<style>
+  .app-content {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+</style>

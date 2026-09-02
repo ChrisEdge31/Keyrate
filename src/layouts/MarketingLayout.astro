@@ -1,0 +1,26 @@
+---
+import Layout from "./Layout.astro";
+import MarketingHeader from "../components/MarketingHeader.astro";
+
+interface Props {
+  title: string;
+  showCta?: boolean;
+}
+
+const { title, showCta = true } = Astro.props;
+---
+
+<Layout title={title}>
+  <MarketingHeader showCta={showCta} />
+  <main>
+    <slot />
+  </main>
+</Layout>
+
+<style>
+  main {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+</style>

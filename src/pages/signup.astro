@@ -1,0 +1,61 @@
+---
+import AuthCard from "../components/AuthCard.astro";
+import MarketingLayout from "../layouts/MarketingLayout.astro";
+---
+
+<MarketingLayout title="Sign up — Keyrate" showCta={false}>
+  <AuthCard title="Create your account" subtitle="Track your speed and accuracy over time.">
+    <form id="signup-form">
+      <label>
+        Name
+        <input type="text" name="name" autocomplete="name" required />
+      </label>
+      <label>
+        Email
+        <input type="email" name="email" autocomplete="email" required />
+      </label>
+      <label>
+        Password
+        <input type="password" name="password" autocomplete="new-password" required minlength="8" />
+      </label>
+      <button type="submit">Sign up</button>
+      <p class="form-status" id="signup-status"></p>
+    </form>
+    <p class="form-note">Already have an account? <a href="/login">Log in</a></p>
+  </AuthCard>
+</MarketingLayout>
+
+<script>
+  import { signUp } from "../lib/auth";
+
+  const form = document.getElementById("signup-form") as HTMLFormElement;
+  const status = document.getElementById("signup-status") as HTMLParagraphElement;
+  const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement;
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const data = new FormData(form);
+    const name = String(data.get("name") ?? "");
+    const email = String(data.get("email") ?? "");
+    const password = String(data.get("password") ?? "");
+
+    submitButton.disabled = true;
+    status.textContent = "";
+
+    const result = await signUp(name, email, password);
+
+    if (result.error) {
+      status.textContent = result.error;
+      submitButton.disabled = false;
+      return;
+    }
+
+    if (result.needsConfirmation) {
+      status.textContent = "Check your email to confirm your account, then log in.";
+      submitButton.disabled = false;
+      return;
+    }
+
+    window.location.href = "/onboarding";
+  });
+</script>

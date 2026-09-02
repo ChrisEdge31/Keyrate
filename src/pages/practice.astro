@@ -1,0 +1,99 @@
+---
+import ControlBar from "../components/ControlBar.astro";
+import Keyboard from "../components/Keyboard.astro";
+import TypingPanel from "../components/TypingPanel.astro";
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { generatePassage } from "../lib/words";
+
+const ALL_LETTERS = "abcdefghijklmnopqrstuvwxyz".split("");
+const initialPassage = generatePassage(ALL_LETTERS);
+---
+
+<DashboardLayout title="Practice — Keyrate">
+  <TypingPanel initialPassage={initialPassage} />
+
+  <ControlBar
+    statusId="letters-status"
+    initialStatus="26 of 26 letters enabled"
+    buttonId="enable-all"
+    buttonLabel="Enable all"
+  />
+
+  <div class="keyboard-wrap">
+    <Keyboard interactive />
+  </div>
+
+  <p class="page-hint">
+    Click a letter on the keyboard to include or exclude it from practice. The cursor won't move until you press
+    the right key; press Enter after finishing for a new passage.
+  </p>
+</DashboardLayout>
+
+<script>
+  import { getProfile } from "../lib/auth";
+  import { generatePassage } from "../lib/words";
+  import { getEnabledLetters, enableAllLetters, onKeyStateChange } from "../lib/keyState";
+  import { createTypingSession } from "../lib/typingSession";
+  import { recordResult } from "../lib/results";
+
+  const profile = await getProfile();
+  if (!profile) {
+    window.location.href = "/login";
+    throw new Error("Not signed in — redirecting to /login.");
+  }
+
+  const restartButton = document.getElementById("restart") as HTMLButtonElement;
+  const lettersStatus = document.getElementById("letters-status") as HTMLParagraphElement;
+  const enableAllButton = document.getElementById("enable-all") as HTMLButtonElement;
+
+  function newPassage() {
+    return generatePassage(getEnabledLetters());
+  }
+
+  const session = createTypingSession(
+    {
+      passageEl: document.getElementById("passage") as HTMLDivElement,
+      input: document.getElementById("typed-input") as HTMLInputElement,
+      wpmEl: document.getElementById("stat-wpm") as HTMLSpanElement,
+      accuracyEl: document.getElementById("stat-accuracy") as HTMLSpanElement,
+      timeEl: document.getElementById("stat-time") as HTMLSpanElement,
+    },
+    {
+      onAdvance: () => newPassage(),
+      onComplete: (result) => {
+        recordResult({ mode: "practice", wpm: result.wpm, accuracy: result.accuracy });
+      },
+    },
+  );
+
+  function updateLettersStatus() {
+    const count = getEnabledLetters().length;
+    lettersStatus.textContent = `${count} of 26 letters enabled`;
+  }
+
+  restartButton.addEventListener("click", () => session.start(newPassage()));
+  enableAllButton.addEventListener("click", () => enableAllLetters());
+
+  onKeyStateChange(() => {
+    updateLettersStatus();
+    session.start(newPassage());
+  });
+
+  updateLettersStatus();
+  session.start(newPassage());
+</script>
+
+<style>
+  .keyboard-wrap {
+    display: flex;
+    justify-content: center;
+    padding-top: 2rem;
+  }
+
+  .page-hint {
+    text-align: center;
+    color: var(--secondary-l1);
+    font-size: 0.8rem;
+    padding-top: 0.75rem;
+  }
+</style>

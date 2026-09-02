@@ -1,0 +1,84 @@
+---
+// Purely static — this only appears on guest-only routes, so there's no
+// auth state to check and nothing to swap after mount. That's deliberate:
+// a runtime "check session, then swap chrome" step is exactly what caused
+// a visible flicker before.
+---
+
+<header class="app-header">
+  <a class="brand" href="/">Keyrate</a>
+  <nav class="links">
+    <a href="/type" class="active">Practice</a>
+  </nav>
+  <div class="actions">
+    <a class="login" href="/login">Log in</a>
+    <a class="cta" href="/signup">Get started</a>
+  </div>
+</header>
+
+<style>
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 1rem 1.5rem;
+    background-color: var(--primary-l1);
+    border-bottom: 1px solid var(--primary-d1);
+  }
+
+  .brand {
+    font-family: var(--header-font-family);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--Name-color);
+    text-decoration: none;
+  }
+
+  .links {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex: 1;
+  }
+
+  .links a {
+    color: var(--secondary-d1);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .links a:hover,
+  .links a.active {
+    color: var(--Name-color);
+  }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .login {
+    color: var(--secondary-d1);
+    text-decoration: none;
+    font-size: 0.95rem;
+  }
+
+  .login:hover {
+    color: var(--Name-color);
+  }
+
+  .cta {
+    padding: 0.5rem 1.1rem;
+    border-radius: 6px;
+    background-color: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .cta:hover {
+    background-color: var(--accent-l1);
+  }
+</style>

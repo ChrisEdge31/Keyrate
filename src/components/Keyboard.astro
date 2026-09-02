@@ -1,0 +1,263 @@
+---
+type Zone =
+  | "pinky"
+  | "ring"
+  | "middle"
+  | "left-index"
+  | "right-index"
+  | "thumb";
+
+interface KeyDef {
+  code: string;
+  width: number;
+  label?: string;
+  shiftLabel?: string;
+  zone: Zone;
+  home?: boolean;
+}
+
+interface Props {
+  interactive?: boolean;
+}
+
+const { interactive = false } = Astro.props;
+
+const KEY_HEIGHT = 38;
+const GAP = 2;
+
+const ROWS: KeyDef[][] = [
+  [
+    { code: "Backquote", width: 38, label: "`", shiftLabel: "~", zone: "pinky" },
+    { code: "Digit1", width: 38, label: "1", shiftLabel: "!", zone: "pinky" },
+    { code: "Digit2", width: 38, label: "2", shiftLabel: "@", zone: "ring" },
+    { code: "Digit3", width: 38, label: "3", shiftLabel: "#", zone: "middle" },
+    { code: "Digit4", width: 38, label: "4", shiftLabel: "$", zone: "left-index" },
+    { code: "Digit5", width: 38, label: "5", shiftLabel: "%", zone: "left-index" },
+    { code: "Digit6", width: 38, label: "6", shiftLabel: "^", zone: "right-index" },
+    { code: "Digit7", width: 38, label: "7", shiftLabel: "&", zone: "right-index" },
+    { code: "Digit8", width: 38, label: "8", shiftLabel: "*", zone: "middle" },
+    { code: "Digit9", width: 38, label: "9", shiftLabel: "(", zone: "ring" },
+    { code: "Digit0", width: 38, label: "0", shiftLabel: ")", zone: "pinky" },
+    { code: "Minus", width: 38, label: "-", shiftLabel: "_", zone: "pinky" },
+    { code: "Equal", width: 38, label: "=", shiftLabel: "+", zone: "pinky" },
+    { code: "Backspace", width: 78, label: "Backspace", zone: "pinky" },
+  ],
+  [
+    { code: "Tab", width: 58, label: "Tab", zone: "pinky" },
+    { code: "KeyQ", width: 38, label: "Q", zone: "pinky" },
+    { code: "KeyW", width: 38, label: "W", zone: "ring" },
+    { code: "KeyE", width: 38, label: "E", zone: "middle" },
+    { code: "KeyR", width: 38, label: "R", zone: "left-index" },
+    { code: "KeyT", width: 38, label: "T", zone: "left-index" },
+    { code: "KeyY", width: 38, label: "Y", zone: "right-index" },
+    { code: "KeyU", width: 38, label: "U", zone: "right-index" },
+    { code: "KeyI", width: 38, label: "I", zone: "middle" },
+    { code: "KeyO", width: 38, label: "O", zone: "ring" },
+    { code: "KeyP", width: 38, label: "P", zone: "pinky" },
+    { code: "BracketLeft", width: 38, label: "[", shiftLabel: "{", zone: "pinky" },
+    { code: "BracketRight", width: 38, label: "]", shiftLabel: "}", zone: "pinky" },
+    { code: "Backslash", width: 58, label: "\\", shiftLabel: "|", zone: "pinky" },
+  ],
+  [
+    { code: "CapsLock", width: 68, label: "Caps Lock", zone: "pinky" },
+    { code: "KeyA", width: 38, label: "A", zone: "pinky" },
+    { code: "KeyS", width: 38, label: "S", zone: "ring" },
+    { code: "KeyD", width: 38, label: "D", zone: "middle" },
+    { code: "KeyF", width: 38, label: "F", zone: "left-index", home: true },
+    { code: "KeyG", width: 38, label: "G", zone: "left-index" },
+    { code: "KeyH", width: 38, label: "H", zone: "right-index" },
+    { code: "KeyJ", width: 38, label: "J", zone: "right-index", home: true },
+    { code: "KeyK", width: 38, label: "K", zone: "middle" },
+    { code: "KeyL", width: 38, label: "L", zone: "ring" },
+    { code: "Semicolon", width: 38, label: ";", shiftLabel: ":", zone: "pinky" },
+    { code: "Quote", width: 38, label: "'", shiftLabel: "\"", zone: "pinky" },
+    { code: "Enter", width: 88, label: "Enter", zone: "pinky" },
+  ],
+  [
+    { code: "ShiftLeft", width: 88, label: "Shift", zone: "pinky" },
+    { code: "KeyZ", width: 38, label: "Z", zone: "pinky" },
+    { code: "KeyX", width: 38, label: "X", zone: "ring" },
+    { code: "KeyC", width: 38, label: "C", zone: "middle" },
+    { code: "KeyV", width: 38, label: "V", zone: "left-index" },
+    { code: "KeyB", width: 38, label: "B", zone: "left-index" },
+    { code: "KeyN", width: 38, label: "N", zone: "right-index" },
+    { code: "KeyM", width: 38, label: "M", zone: "right-index" },
+    { code: "Comma", width: 38, label: ",", shiftLabel: "<", zone: "middle" },
+    { code: "Period", width: 38, label: ".", shiftLabel: ">", zone: "ring" },
+    { code: "Slash", width: 38, label: "/", shiftLabel: "?", zone: "pinky" },
+    { code: "ShiftRight", width: 108, label: "Shift", zone: "pinky" },
+  ],
+  [
+    { code: "ControlLeft", width: 58, label: "Ctrl", zone: "pinky" },
+    { code: "AltLeft", width: 58, label: "Alt", zone: "thumb" },
+    { code: "Space", width: 358, zone: "thumb" },
+    { code: "AltRight", width: 58, label: "Alt", zone: "thumb" },
+    { code: "ControlRight", width: 58, label: "Ctrl", zone: "pinky" },
+  ],
+];
+
+const rows = ROWS.map((row, rowIndex) => {
+  let x = 0;
+  const keys = row.map((key) => {
+    const placed = { ...key, x, y: rowIndex * (KEY_HEIGHT + GAP) };
+    x += key.width + GAP;
+    return placed;
+  });
+  return { keys, width: x - GAP };
+});
+
+const boardWidth = Math.max(...rows.map((row) => row.width));
+const boardHeight = rows.length * (KEY_HEIGHT + GAP) - GAP;
+---
+
+<div class="keyboard" data-interactive={interactive ? "true" : "false"}>
+  <svg
+    class="keys"
+    viewBox={`0 0 ${boardWidth} ${boardHeight}`}
+    width={boardWidth}
+    height={boardHeight}
+  >
+    {rows.map((row) =>
+      row.keys.map((key) => (
+        <svg
+          class={`key zone-${key.zone}`}
+          x={key.x}
+          y={key.y}
+          width={key.width}
+          height={KEY_HEIGHT}
+          data-key={key.code}
+        >
+          <rect width={key.width} height={KEY_HEIGHT} rx="4" />
+          {key.home && <circle class="home-dot" cx={key.width / 2} cy="33" r="3" />}
+          {key.shiftLabel ? (
+            <>
+              <text x="10" y="27" text-anchor="middle" dominant-baseline="middle">
+                {key.label}
+              </text>
+              <text x="10" y="12" text-anchor="middle" dominant-baseline="middle">
+                {key.shiftLabel}
+              </text>
+            </>
+          ) : key.label && key.label.length === 1 ? (
+            <text x="10" y="12" text-anchor="middle" dominant-baseline="middle">
+              {key.label}
+            </text>
+          ) : key.label ? (
+            <text x="10" y="20" text-anchor="start" dominant-baseline="middle">
+              {key.label}
+            </text>
+          ) : null}
+        </svg>
+      )),
+    )}
+  </svg>
+</div>
+
+<script>
+  import { getDisabledLetters, toggleLetter, onKeyStateChange } from "../lib/keyState";
+
+  document.addEventListener("keydown", (event) => {
+    document.querySelector(`.keyboard [data-key="${event.code}"]`)?.classList.add("pressed");
+  });
+
+  document.addEventListener("keyup", (event) => {
+    document.querySelector(`.keyboard [data-key="${event.code}"]`)?.classList.remove("pressed");
+  });
+
+  const interactiveBoards = document.querySelectorAll<HTMLElement>(
+    '.keyboard[data-interactive="true"]',
+  );
+
+  function letterFromKeyCode(code: string): string {
+    return code.replace("Key", "").toLowerCase();
+  }
+
+  function syncDisabledState() {
+    const disabled = getDisabledLetters();
+    interactiveBoards.forEach((board) => {
+      board.querySelectorAll<SVGElement>('[data-key^="Key"]').forEach((keyEl) => {
+        const letter = letterFromKeyCode(keyEl.getAttribute("data-key") ?? "");
+        keyEl.classList.toggle("disabled", disabled.has(letter));
+      });
+    });
+  }
+
+  interactiveBoards.forEach((board) => {
+    board.addEventListener("click", (event) => {
+      const keyEl = (event.target as Element).closest<SVGElement>('[data-key^="Key"]');
+      if (!keyEl) return;
+      toggleLetter(letterFromKeyCode(keyEl.getAttribute("data-key") ?? ""));
+    });
+  });
+
+  if (interactiveBoards.length > 0) {
+    syncDisabledState();
+    onKeyStateChange(syncDisabledState);
+  }
+</script>
+
+<style>
+  .keyboard {
+    display: inline-block;
+    padding: 1rem;
+    background-color: var(--primary);
+    border-radius: 8px;
+  }
+
+  .keys {
+    width: 100%;
+    height: auto;
+  }
+
+  .key rect {
+    fill: var(--secondary);
+    stroke: var(--primary-d1);
+    stroke-width: 1;
+  }
+
+  .key text {
+    fill: var(--secondary);
+    font-family: var(--value-font-family);
+    font-size: 11px;
+  }
+
+  .key .home-dot {
+    fill: var(--secondary);
+  }
+
+  .key.zone-pinky rect {
+    fill: var(--pinky-zone-color);
+  }
+
+  .key.zone-ring rect {
+    fill: var(--ring-zone-color);
+  }
+
+  .key.zone-middle rect {
+    fill: var(--middle-zone-color);
+  }
+
+  .key.zone-left-index rect {
+    fill: var(--left-index-zone-color);
+  }
+
+  .key.zone-right-index rect {
+    fill: var(--right-index-zone-color);
+  }
+
+  .key.zone-thumb rect {
+    fill: var(--thumb-zone-color);
+  }
+
+  .key.pressed rect {
+    fill: var(--KeyboardKey-pointer__color);
+  }
+
+  .keyboard[data-interactive="true"] .key[data-key^="Key"] {
+    cursor: pointer;
+  }
+
+  svg.key.disabled {
+    opacity: 0.3;
+  }
+</style>

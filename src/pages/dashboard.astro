@@ -1,0 +1,115 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+
+const actions = [
+	{
+		href: "/learn",
+		title: "Continue learning",
+		body: "Pick up your guided lesson where you left off.",
+	},
+	{
+		href: "/practice",
+		title: "Free practice",
+		body: "Practice with any letters you choose, no lesson structure.",
+	},
+	{
+		href: "/profile",
+		title: "View your stats",
+		body: "See your speed, accuracy, and session history.",
+	},
+];
+---
+
+<DashboardLayout title="Dashboard — Keyrate">
+  <section class="greeting">
+    <h1 id="greeting-heading">Welcome back!</h1>
+    <p class="goals" id="goals-summary" hidden></p>
+    <p class="goals" id="keys-progress"></p>
+  </section>
+
+  <section class="actions">
+    {actions.map((action) => (
+      <a class="action" href={action.href}>
+        <h2>{action.title}</h2>
+        <p>{action.body}</p>
+      </a>
+    ))}
+  </section>
+</DashboardLayout>
+
+<script>
+  import { getProfile } from "../lib/auth";
+  import { getUnlockedLetters, isComplete, LETTER_ORDER } from "../lib/lessonState";
+
+  const profile = await getProfile();
+  if (!profile) {
+    window.location.href = "/login";
+  } else {
+    if (profile.name) {
+      const heading = document.getElementById("greeting-heading");
+      if (heading) heading.textContent = `Welcome back, ${profile.name}!`;
+    }
+
+    const goalsSummary = document.getElementById("goals-summary") as HTMLParagraphElement;
+    if (profile.speedGoal != null && profile.dailyMinutes != null) {
+      goalsSummary.textContent = `Your goal: ${profile.speedGoal} wpm, ${profile.dailyMinutes} minutes a day.`;
+      goalsSummary.hidden = false;
+    }
+
+    const keysProgress = document.getElementById("keys-progress") as HTMLParagraphElement;
+    keysProgress.textContent = isComplete()
+      ? "All 26 keys unlocked — free practice from here!"
+      : `${getUnlockedLetters().length} of ${LETTER_ORDER.length} keys unlocked.`;
+  }
+</script>
+
+<style>
+  .greeting {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--primary-d1);
+  }
+
+  .greeting h1 {
+    margin: 0 0 0.5rem;
+    font-size: 1.75rem;
+  }
+
+  .goals {
+    margin: 0;
+    color: var(--secondary-d1);
+    font-family: var(--value-font-family);
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    padding-top: 2rem;
+  }
+
+  .action {
+    display: block;
+    padding: 1.25rem;
+    background-color: var(--primary-l1);
+    border: 1px solid var(--primary-d1);
+    border-radius: 8px;
+    text-decoration: none;
+    transition: border-color 0.15s;
+  }
+
+  .action:hover {
+    border-color: var(--secondary);
+  }
+
+  .action h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.1rem;
+    color: var(--Name-color);
+  }
+
+  .action p {
+    margin: 0;
+    color: var(--secondary-d1);
+    font-size: 0.9rem;
+  }
+</style>
